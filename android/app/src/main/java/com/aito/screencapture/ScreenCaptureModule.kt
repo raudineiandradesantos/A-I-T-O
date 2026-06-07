@@ -91,6 +91,15 @@ class ScreenCaptureModule(reactContext: ReactApplicationContext) :
         val config = MediaProjectionConfig.createConfigForUserChoice()
         return projectionManager.createScreenCaptureIntent(config)
     }
+
+    /**
+     * Create intent for entire screen capture on Android 14+
+     */
+    @RequiresApi(ANDROID_14_API_LEVEL)
+    private fun createEntireScreenIntent(): Intent {
+        val config = MediaProjectionConfig.createConfigForDefaultDisplay()
+        return projectionManager.createScreenCaptureIntent(config)
+    }
     
     /**
      * Request permission for ENTIRE SCREEN capture (no app selection)
@@ -119,8 +128,7 @@ class ScreenCaptureModule(reactContext: ReactApplicationContext) :
             // This removes the "A single app" option entirely
             val captureIntent = if (Build.VERSION.SDK_INT >= ANDROID_14_API_LEVEL) {
                 Log.d(TAG, "Android 14+: Using createConfigForDefaultDisplay() to force entire screen")
-                val config = MediaProjectionConfig.createConfigForDefaultDisplay()
-                projectionManager.createScreenCaptureIntent(config)
+                createEntireScreenIntent()
             } else {
                 Log.d(TAG, "Android < 14: Using standard createScreenCaptureIntent()")
                 projectionManager.createScreenCaptureIntent()
@@ -318,20 +326,20 @@ class ScreenCaptureModule(reactContext: ReactApplicationContext) :
                         ScreenCaptureService.resultData = data
                         
                         val isAndroid14Plus = Build.VERSION.SDK_INT >= ANDROID_14_API_LEVEL
-                        Log.d(TAG, "✅ MediaProjection permission granted (Android 14+ app selection: $isAndroid14Plus)")
+                        Log.d(TAG, "â MediaProjection permission granted (Android 14+ app selection: $isAndroid14Plus)")
                         
                         pendingPromise?.resolve(true)
                     } else {
-                        Log.e(TAG, "❌ Result OK but data is null")
+                        Log.e(TAG, "â Result OK but data is null")
                         pendingPromise?.reject("ERROR", "Permission granted but data is null")
                     }
                 }
                 Activity.RESULT_CANCELED -> {
-                    Log.w(TAG, "❌ User canceled screen capture permission")
+                    Log.w(TAG, "â User canceled screen capture permission")
                     pendingPromise?.reject("PERMISSION_DENIED", "User canceled screen capture permission")
                 }
                 else -> {
-                    Log.e(TAG, "❌ Unexpected result code: $resultCode")
+                    Log.e(TAG, "â Unexpected result code: $resultCode")
                     pendingPromise?.reject("ERROR", "Unexpected result code: $resultCode")
                 }
             }
